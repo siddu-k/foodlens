@@ -493,9 +493,9 @@ const app = {
     document.querySelectorAll(".cam-zoom-btn").forEach(btn => {
       const bZ = parseFloat(btn.dataset.zoom);
       if (Math.abs(bZ - clamped) < 0.15) {
-        btn.className = "cam-zoom-btn active text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500 text-zinc-950 transition-all";
+        btn.className = "cam-zoom-btn active text-xs font-mono font-bold px-3 py-1 rounded-xl bg-emerald-500 text-zinc-950 shadow-sm transition-all";
       } else {
-        btn.className = "cam-zoom-btn text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full text-zinc-300 hover:text-white transition-all";
+        btn.className = "cam-zoom-btn text-xs font-mono font-bold px-3 py-1 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white transition-all";
       }
     });
 
