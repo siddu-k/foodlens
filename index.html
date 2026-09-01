@@ -403,11 +403,17 @@
               <!-- Rendered by JS -->
             </div>
 
-            <!-- Quick Add to Expiry Tracker Button -->
-            <button class="w-full h-9 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-colors" onclick="app.addCurrentScanToExpiry()">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-              Save to Expiry Date Tracker
-            </button>
+            <!-- Quick Actions: Suggest Better Alternatives + Add to Expiry Tracker -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button class="h-9.5 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95" onclick="app.openAlternativesSheet()">
+                <svg class="w-3.5 h-3.5 text-zinc-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                Suggest Swaps
+              </button>
+              <button class="h-9.5 py-2 px-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-emerald-500/20 transition-colors active:scale-95" onclick="app.addCurrentScanToExpiry()">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                Save to Pantry
+              </button>
+            </div>
           </div>
 
           <!-- Unified 4-Pillar Score Breakdown (Clean Progress Lines, Not Crowded Boxes) -->
@@ -746,6 +752,35 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Floating Slide-Up Sheet for Healthier Food Alternatives -->
+  <div id="alternatives-bottom-sheet" class="bottom-sheet-overlay" onclick="if(event.target === this) app.closeAlternativesSheet()">
+    <div class="bottom-sheet-drawer">
+      <!-- Drag Handle & Header -->
+      <div class="p-4 pb-3 border-b border-zinc-800 bg-zinc-900/90 relative">
+        <div class="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-3 cursor-pointer" onclick="app.closeAlternativesSheet()"></div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="h-7 w-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold text-zinc-100">Smart Alternatives</h3>
+              <p class="text-[10px] text-zinc-400" id="alternatives-category-subtitle">Healthier swaps for your product</p>
+            </div>
+          </div>
+          <button class="h-7 w-7 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 flex items-center justify-center transition-colors" onclick="app.closeAlternativesSheet()">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable List of Food Items with Real Photos -->
+      <div class="p-4 space-y-3 overflow-y-auto max-h-[70vh]" id="alternatives-items-list">
+        <!-- Rendered dynamically by JS -->
+      </div>
     </div>
   </div>
 

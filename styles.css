@@ -234,3 +234,49 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* ==========================================================================
+   Slide-Up Bottom Sheet Drawer (Smart Food Alternatives)
+   ========================================================================== */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bottom-sheet-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bottom-sheet-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  background-color: #09090b;
+  border-top: 1px solid #27272a;
+  border-left: 1px solid #27272a;
+  border-right: 1px solid #27272a;
+  border-top-left-radius: 1.5rem;
+  border-top-right-radius: 1.5rem;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.85);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 71;
+}
+
+.bottom-sheet-overlay.open .bottom-sheet-drawer {
+  transform: translateX(-50%) translateY(0);
+}
+

@@ -466,8 +466,8 @@ const app = {
     navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
       }
     })
       .then((stream) => {
@@ -641,14 +641,22 @@ Determine if the image contains an actual packaged food product, nutrition facts
   }
 
 - If the image IS a valid food product/label:
-  Extract accurate facts and return strictly:
+  EXACT NUTRITION EXTRACTION RULES (DO NOT GUESS OR ESTIMATE):
+  1. COLUMN PRIORITY: If multiple columns exist (e.g. "Per Serving" vs "Per 100g"), ALWAYS extract values for **Per Serving** (or per package if single portion). State the exact serving size string in "servingSize" (e.g., "30g (2 biscuits)").
+  2. If the label ONLY provides "Per 100g", extract those exact numbers and set "servingSize": "100g".
+  3. ABSOLUTE NUMBERS ONLY: Extract exact numerical amounts (grams for macros, milligrams for sodium). NEVER extract or confuse with "% Daily Value" (% DV).
+  4. SALT TO SODIUM CONVERSION: If the label only lists "Salt" in grams (common on EU/UK/Indian labels), convert to Sodium in milligrams: Sodium (mg) = Salt (g) * 400.
+  5. UNITS: Calories in kcal, Protein in grams (g), Total Carbohydrates in grams (g), Total Sugar in grams (g), Added Sugar in grams (g), Dietary Fiber in grams (g), Total Fat in grams (g), Saturated Fat in grams (g), Sodium in milligrams (mg).
+  6. INGREDIENTS: Extract the complete comma-separated ingredients list in exact printed order.
+
+  Return strictly JSON:
   {
     "isFoodProduct": true,
     "rejectionReason": "",
     "productName": "Exact product name (or best guess from label)",
     "brand": "Brand or Manufacturer name",
-    "category": "Food category (e.g. Snack Bars, Cereals, Beverages, Dairy, Meals)",
-    "servingSize": "Serving size string (e.g. 50g / 1 bar)",
+    "category": "Food category (e.g. Snack Bars, Chips & Snacks, Cereals & Oats, Beverages & Sodas, Dairy & Yogurt, Chocolates & Sweets, Spreads & Butters, Breads & Grains, Instant Meals)",
+    "servingSize": "Exact serving size string (e.g. 30g / 1 bar / 100g)",
     "servingsPerPackage": 1.0,
     "frontClaims": ["Claim 1", "Claim 2"],
     "nutrition": {
@@ -1090,6 +1098,338 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
 
     // Reset Chat Messages for this product
     this.resetProductChat(product);
+  },
+
+  // -------------------------------------------------------------
+  // Smart Healthier Alternatives Slide-Up Drawer
+  // -------------------------------------------------------------
+  alternativesDatabase: {
+    "snack bars": [
+      {
+        name: "RXBAR Chocolate Sea Salt Protein Bar",
+        brand: "RXBAR",
+        image: "https://images.unsplash.com/photo-1622484214149-6e3e57f18392?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "12g Egg White Protein, 0g Added Sugar",
+        badge: "Clean Whole Food",
+        calories: 210,
+        protein: 12,
+        sugar: 0,
+        fiber: 5,
+        difference: "No artificial syrups or inflammatory palm oils"
+      },
+      {
+        name: "Barebells Clean Whey Protein Bar",
+        brand: "Barebells",
+        image: "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "20g Protein, 1.5g Sugar, High Fiber",
+        badge: "High Protein",
+        calories: 200,
+        protein: 20,
+        sugar: 1.5,
+        fiber: 4,
+        difference: "+15g Protein vs typical snack bars"
+      },
+      {
+        name: "Raw Organic Sprouted Seed Energy Bar",
+        brand: "Go Raw",
+        image: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "100% Sprouted Seeds, Rich in Omega-3",
+        badge: "Organic & Raw",
+        calories: 180,
+        protein: 8,
+        sugar: 4,
+        fiber: 6,
+        difference: "100% Whole Seeds, zero refined starch"
+      }
+    ],
+    "chips": [
+      {
+        name: "Air-Popped Organic Olive Oil Chips",
+        brand: "LesserEvil",
+        image: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "-60% Saturated Fat, Pure Extra Virgin Olive Oil",
+        badge: "Clean Oils",
+        calories: 120,
+        protein: 3,
+        sugar: 0,
+        fiber: 3,
+        difference: "Zero seed oils or inflammatory trans fats"
+      },
+      {
+        name: "Crispy Roasted Sea Salt Chickpeas",
+        brand: "Biena",
+        image: "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "6g Plant Protein, 6g Dietary Fiber",
+        badge: "High Fiber",
+        calories: 130,
+        protein: 6,
+        sugar: 1,
+        fiber: 6,
+        difference: "Low glycemic index, sustained digestive energy"
+      },
+      {
+        name: "Organic Baked Sea Salt Kale Crisps",
+        brand: "Rhythm Superfoods",
+        image: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Nutrient-Dense Green Superfood, Low Sodium",
+        badge: "Whole Green",
+        calories: 90,
+        protein: 4,
+        sugar: 1,
+        fiber: 4,
+        difference: "Real organic kale, zero synthetic dyes"
+      }
+    ],
+    "beverages": [
+      {
+        name: "Olipop Sparkling Prebiotic Tonic",
+        brand: "Olipop",
+        image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "9g Prebiotic Plant Fiber, Only 2g Sugar",
+        badge: "Gut Health Hero",
+        calories: 35,
+        protein: 0,
+        sugar: 2,
+        fiber: 9,
+        difference: "-35g Sugar vs regular carbonated sodas"
+      },
+      {
+        name: "Organic Hibiscus Berry Sparkling Water",
+        brand: "Spindrift",
+        image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Real Squeezed Fruit, 0g Added Sugar",
+        badge: "Zero Artificial",
+        calories: 12,
+        protein: 0,
+        sugar: 2,
+        fiber: 0,
+        difference: "No aspartame, sucralose, or high fructose syrup"
+      },
+      {
+        name: "Ceremonial Cold Brew Matcha",
+        brand: "Ito En",
+        image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "L-Theanine Clean Focus & Antioxidants",
+        badge: "Antioxidant Rich",
+        calories: 0,
+        protein: 0,
+        sugar: 0,
+        fiber: 0,
+        difference: "Sustained calm energy without blood sugar crashes"
+      }
+    ],
+    "cereals": [
+      {
+        name: "Sprouted Ancient Grain Rolled Oats",
+        brand: "One Degree",
+        image: "https://images.unsplash.com/photo-1586439702132-55ce0da661dd?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "0g Added Sugar, High Beta-Glucan Fiber",
+        badge: "Heart Healthy",
+        calories: 150,
+        protein: 6,
+        sugar: 1,
+        fiber: 5,
+        difference: "Unrefined whole grain, zero glucose spikes"
+      },
+      {
+        name: "Grain-Free Almond Cinnamon Granola",
+        brand: "Autumn's Gold",
+        image: "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Real Almonds & Pecans, 4g Net Carbs",
+        badge: "Keto & Diabetic Safe",
+        calories: 200,
+        protein: 6,
+        sugar: 4,
+        fiber: 4,
+        difference: "Rich in healthy monounsaturated fats"
+      },
+      {
+        name: "Organic Chia & Flaxseed Crunch",
+        brand: "Nature's Path",
+        image: "https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "High Omega-3 ALA, 7g Dietary Fiber",
+        badge: "Clean Superfood",
+        calories: 170,
+        protein: 5,
+        sugar: 3,
+        fiber: 7,
+        difference: "High fiber promotes healthy lipid profiles"
+      }
+    ],
+    "chocolates": [
+      {
+        name: "Hu Simple Dark Chocolate 70% Cacao",
+        brand: "Hu Kitchen",
+        image: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Organic Coconut Sugar, No Soy Lecithin or Palm Oil",
+        badge: "Ultra Clean Dark",
+        calories: 170,
+        protein: 3,
+        sugar: 7,
+        fiber: 4,
+        difference: "Zero dairy, refined cane sugar, or chemical emulsifiers"
+      },
+      {
+        name: "Almond Flour Soft Baked Clean Cookies",
+        brand: "Simple Mills",
+        image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Nutrient-dense almond flour, only 4g sugar",
+        badge: "Grain-Free",
+        calories: 120,
+        protein: 3,
+        sugar: 4,
+        fiber: 2,
+        difference: "Gluten-free, zero artificial preservatives"
+      }
+    ],
+    "dairy": [
+      {
+        name: "Organic Plain Nonfat Greek Yogurt",
+        brand: "Fage Total 0%",
+        image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "18g Protein per cup, 0g Added Sugar",
+        badge: "High Protein",
+        calories: 120,
+        protein: 18,
+        sugar: 5,
+        fiber: 0,
+        difference: "Pure fermented live probiotic cultures"
+      },
+      {
+        name: "Single-Ingredient Creamy Almond Butter",
+        brand: "Artisana Organics",
+        image: "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "100% Raw Almonds, Zero Added Oils or Sugars",
+        badge: "Single Ingredient",
+        calories: 190,
+        protein: 7,
+        sugar: 1,
+        fiber: 4,
+        difference: "No hydrogenated oils, palm oil, or added salt"
+      }
+    ],
+    "general": [
+      {
+        name: "Wild Organic Raw Nut & Berry Mix",
+        brand: "NOW Real Food",
+        image: "https://images.unsplash.com/photo-1502741224143-90386d7f8c82?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Raw Walnuts, Almonds & Wild Berries",
+        badge: "Heart & Brain Health",
+        calories: 160,
+        protein: 5,
+        sugar: 6,
+        fiber: 4,
+        difference: "Antioxidant powerhouse with clean healthy fats"
+      },
+      {
+        name: "Organic Medjool Dates with Almond Butter",
+        brand: "Joolies",
+        image: "https://images.unsplash.com/photo-1596797882870-8c33deeac224?w=400&auto=format&fit=crop&q=80",
+        whyBetter: "Whole Plant Fiber & Natural Potassium",
+        badge: "Clean Energy",
+        calories: 140,
+        protein: 3,
+        sugar: 14,
+        fiber: 3,
+        difference: "Zero refined sugar, high mineral electrolyte density"
+      }
+    ]
+  },
+
+  getAlternativesForCategory(categoryStr, productName) {
+    const text = `${categoryStr || ''} ${productName || ''}`.toLowerCase();
+    if (text.includes("bar") || text.includes("protein") || text.includes("snack") || text.includes("energy")) {
+      return this.alternativesDatabase["snack bars"];
+    }
+    if (text.includes("chip") || text.includes("crisp") || text.includes("cracker") || text.includes("popcorn") || text.includes("nacho")) {
+      return this.alternativesDatabase["chips"];
+    }
+    if (text.includes("drink") || text.includes("soda") || text.includes("cola") || text.includes("beverage") || text.includes("tea") || text.includes("coffee") || text.includes("juice")) {
+      return this.alternativesDatabase["beverages"];
+    }
+    if (text.includes("cereal") || text.includes("oat") || text.includes("granola") || text.includes("flake") || text.includes("breakfast")) {
+      return this.alternativesDatabase["cereals"];
+    }
+    if (text.includes("chocolate") || text.includes("cookie") || text.includes("candy") || text.includes("sweet") || text.includes("biscuit") || text.includes("dessert")) {
+      return this.alternativesDatabase["chocolates"];
+    }
+    if (text.includes("yogurt") || text.includes("milk") || text.includes("dairy") || text.includes("cheese") || text.includes("butter") || text.includes("spread")) {
+      return this.alternativesDatabase["dairy"];
+    }
+    return this.alternativesDatabase["general"];
+  },
+
+  openAlternativesSheet() {
+    const sheet = document.getElementById("alternatives-bottom-sheet");
+    const container = document.getElementById("alternatives-items-list");
+    const subtitle = document.getElementById("alternatives-category-subtitle");
+    if (!sheet || !container) return;
+
+    const prod = state.currentProductData || {};
+    const items = this.getAlternativesForCategory(prod.category, prod.productName);
+
+    if (subtitle) {
+      subtitle.textContent = `Healthier swaps for "${prod.productName || prod.category || 'your product'}"`;
+    }
+
+    container.innerHTML = items.map(item => `
+      <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 space-y-3 hover:border-emerald-500/40 transition-all">
+        <div class="flex items-start gap-3">
+          <img src="${item.image}" alt="${item.name}" class="w-16 h-16 rounded-xl object-cover border border-zinc-800 shrink-0 bg-zinc-950" loading="lazy" />
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-[10px] font-mono font-semibold text-zinc-400 truncate">${item.brand}</span>
+              <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shrink-0">${item.badge}</span>
+            </div>
+            <h4 class="text-xs font-bold text-zinc-100 leading-snug line-clamp-1">${item.name}</h4>
+            <p class="text-[11px] text-emerald-400 font-medium">${item.whyBetter}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-1 py-1.5 px-2.5 rounded-xl bg-zinc-950 border border-zinc-800/80 text-center">
+          <div><span class="text-[9px] text-zinc-500 block">Calories</span><span class="text-[11px] font-mono font-bold text-zinc-200">${item.calories}</span></div>
+          <div><span class="text-[9px] text-zinc-500 block">Protein</span><span class="text-[11px] font-mono font-bold text-emerald-400">${item.protein}g</span></div>
+          <div><span class="text-[9px] text-zinc-500 block">Sugar</span><span class="text-[11px] font-mono font-bold text-zinc-300">${item.sugar}g</span></div>
+          <div><span class="text-[9px] text-zinc-500 block">Fiber</span><span class="text-[11px] font-mono font-bold text-cyan-400">${item.fiber}g</span></div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1 text-xs">
+          <span class="text-[10px] text-zinc-400 italic">💡 ${item.difference}</span>
+          <button class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold transition-colors flex items-center gap-1 shrink-0" onclick="app.addSwapToPantry('${item.name.replace(/'/g, "\\'")}', '${item.brand.replace(/'/g, "\\'")}', '${item.image}')">
+            + Add to Pantry
+          </button>
+        </div>
+      </div>
+    `).join("");
+
+    sheet.classList.add("open");
+  },
+
+  closeAlternativesSheet() {
+    const sheet = document.getElementById("alternatives-bottom-sheet");
+    if (sheet) sheet.classList.remove("open");
+  },
+
+  addSwapToPantry(name, brand, img) {
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + 14);
+
+    const item = {
+      id: "swap-" + Date.now(),
+      name: name,
+      category: "Pantry",
+      expiryDate: expDate.toISOString().split("T")[0],
+      daysLeft: 14,
+      status: "FRESH",
+      image: img
+    };
+
+    state.expiryItems.unshift(item);
+    localStorage.setItem("foodlens_expiry_items", JSON.stringify(state.expiryItems));
+    this.renderExpiryItems();
+    this.renderHomeDashboard();
+    this.closeAlternativesSheet();
+    this.showToast(`Added "${name}" to Pantry Tracker!`);
   },
 
   resetProductChat(product) {
