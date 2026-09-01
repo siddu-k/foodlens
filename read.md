@@ -4,13 +4,16 @@
 
 ---
 
-## 🔍 Live Camera Zoom Controls (While Scanning)
+## 🌟 Core App Highlights
 
-When you tap **Take Photo** in the scanner wizard, the camera modal displays:
-1. **Zoom Slider**: Horizontal range slider positioned directly above the shutter button for continuous zoom from **1.0x to 3.0x**.
-2. **Quick Preset Buttons**: Dedicated **`[ 1x ]`**, **`[ 1.5x ]`**, **`[ 2x ]`**, and **`[ 3x ]`** tactile buttons.
-3. **Live Zoom Badge**: Real-time zoom level indicator (`1.0x` / `2.0x`) in the top right header.
-4. **Accurate Zoomed Snapshotting**: Crops the zoomed view into high-resolution images for Gemini Vision OCR.
+1. **Clean Expiring Soon Alerts**: Minimalist alert cards without unnecessary decorative dots.
+2. **Live Camera Zoom (1x, 1.5x, 2x, 3x & Slider)**: Macro zoom to capture tiny text on food labels.
+3. **Standalone Fullscreen App (Zero Address / Search Bar)**: Add to Home Screen (iOS & Android) for 100% borderless native app experience.
+4. **Medical & Health Condition Clinical Audits**: Analyzes products against *Hypertension*, *Type 2 Diabetes*, *High Cholesterol*, *GERD / Acid Reflux*, *Fatty Liver*, *Gout*, *IBS*, and *Kidney Issues*.
+5. **Food-Label Verification (Anti-Hallucination)**: Non-food photos (laptops, pets, documents, clothing) are rejected with clear descriptions.
+6. **Clean Uncrowded Analytics**: Horizontal nutrient ribbon, unified 4-pillar quality breakdown, claim buster, and additive audit.
+7. **Interactive AI Product Chat**: Context-aware nutritionist assistant factoring in your health goals and medical conditions.
+8. **Mobile Settings & Push Notifications**: Notification master toggle, sub-alert switches, Gemini Vision API Key settings, and 1-tap data purge.
 
 ---
 
@@ -25,4 +28,3 @@ Open in your browser or mobile phone:
 ```
 http://localhost:8080
 ```
-*(Please do a quick hard refresh or reload `http://localhost:8080` to ensure your browser loads the latest camera layout).*

@@ -101,8 +101,7 @@ const app = {
     if (alertsContainer) {
       if (expiringSoon.length === 0) {
         alertsContainer.innerHTML = `
-          <div class="text-xs text-zinc-500 py-1.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <div class="text-xs text-zinc-500 py-1.5">
             All pantry items are fresh. No imminent expirations.
           </div>
         `;
