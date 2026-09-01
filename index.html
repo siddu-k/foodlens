@@ -767,13 +767,22 @@
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
             </div>
             <div>
-              <h3 class="text-xs font-bold text-zinc-100">Smart Alternatives</h3>
-              <p class="text-[10px] text-zinc-400" id="alternatives-category-subtitle">Healthier swaps for your product</p>
+              <div class="flex items-center gap-1.5">
+                <h3 class="text-xs font-bold text-zinc-100">AI Smart Swaps</h3>
+                <span class="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30">Gemini AI</span>
+              </div>
+              <p class="text-[10px] text-zinc-400 truncate max-w-[180px]" id="alternatives-category-subtitle">Live AI tailored to your upload</p>
             </div>
           </div>
-          <button class="h-7 w-7 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 flex items-center justify-center transition-colors" onclick="app.closeAlternativesSheet()">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+          <div class="flex items-center gap-1">
+            <button id="btn-refresh-ai-swaps" class="h-7 px-2 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1 transition-colors" onclick="app.generateLiveAiSwaps(true)" title="Generate new AI swaps">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M22 12.5a10 10 0 0 1-18.8 4.2L2.5 16"/></svg>
+              <span class="text-[10px] font-medium">New Swaps</span>
+            </button>
+            <button class="h-7 w-7 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 flex items-center justify-center transition-colors" onclick="app.closeAlternativesSheet()">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 

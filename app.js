@@ -670,7 +670,21 @@ Determine if the image contains an actual packaged food product, nutrition facts
       "saturatedFat": 1.5,
       "sodium": 200.0
     },
-    "ingredients": "Full comma-separated ingredients list"
+    "ingredients": "Full comma-separated ingredients list",
+    "healthyAlternatives": [
+      {
+        "name": "Real commercial brand product name",
+        "brand": "Brand",
+        "whyBetter": "Specific reason why this is a healthier alternative compared to the uploaded item",
+        "badge": "e.g. Low Glycemic / High Protein / Zero Sugar / Clean Oil",
+        "calories": 160,
+        "protein": 12.0,
+        "sugar": 2.0,
+        "fiber": 5.0,
+        "difference": "Key macro/ingredient advantage (e.g. -15g sugar, zero palm oil)",
+        "imageKeyword": "snack bar / yogurt / dark chocolate / oats / chips / tea / bread"
+      }
+    ]
   }
 
 Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
@@ -1359,50 +1373,206 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
     return this.alternativesDatabase["general"];
   },
 
+  resolveSwapImage(item) {
+    if (item.image && item.image.startsWith("http")) return item.image;
+
+    const query = `${item.imageKeyword || ''} ${item.name || ''} ${item.brand || ''}`.toLowerCase();
+    
+    if (query.includes("bar") || query.includes("protein")) {
+      return "https://images.unsplash.com/photo-1622484214149-6e3e57f18392?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("chip") || query.includes("crisp") || query.includes("popcorn") || query.includes("snack") || query.includes("cracker")) {
+      return "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("chickpea") || query.includes("seed") || query.includes("nut")) {
+      return "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("drink") || query.includes("soda") || query.includes("tonic") || query.includes("sparkling") || query.includes("beverage")) {
+      return "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("tea") || query.includes("matcha") || query.includes("coffee")) {
+      return "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("oat") || query.includes("cereal") || query.includes("granola") || query.includes("grain")) {
+      return "https://images.unsplash.com/photo-1586439702132-55ce0da661dd?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("chocolate") || query.includes("cacao") || query.includes("candy") || query.includes("sweet") || query.includes("cookie")) {
+      return "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("yogurt") || query.includes("dairy") || query.includes("milk") || query.includes("cheese")) {
+      return "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("butter") || query.includes("spread") || query.includes("peanut") || query.includes("almond")) {
+      return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=400&auto=format&fit=crop&q=80";
+    }
+    if (query.includes("bread") || query.includes("pasta") || query.includes("flour") || query.includes("noodle")) {
+      return "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&auto=format&fit=crop&q=80";
+    }
+    return "https://images.unsplash.com/photo-1502741224143-90386d7f8c82?w=400&auto=format&fit=crop&q=80";
+  },
+
   openAlternativesSheet() {
     const sheet = document.getElementById("alternatives-bottom-sheet");
-    const container = document.getElementById("alternatives-items-list");
-    const subtitle = document.getElementById("alternatives-category-subtitle");
-    if (!sheet || !container) return;
+    if (!sheet) return;
+    sheet.classList.add("open");
 
     const prod = state.currentProductData || {};
-    const items = this.getAlternativesForCategory(prod.category, prod.productName);
-
+    const subtitle = document.getElementById("alternatives-category-subtitle");
     if (subtitle) {
-      subtitle.textContent = `Healthier swaps for "${prod.productName || prod.category || 'your product'}"`;
+      subtitle.textContent = `Swaps for "${prod.productName || prod.category || 'scanned product'}"`;
     }
 
-    container.innerHTML = items.map(item => `
-      <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 space-y-3 hover:border-emerald-500/40 transition-all">
-        <div class="flex items-start gap-3">
-          <img src="${item.image}" alt="${item.name}" class="w-16 h-16 rounded-xl object-cover border border-zinc-800 shrink-0 bg-zinc-950" loading="lazy" />
-          <div class="flex-1 min-w-0 space-y-1">
-            <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-mono font-semibold text-zinc-400 truncate">${item.brand}</span>
-              <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shrink-0">${item.badge}</span>
-            </div>
-            <h4 class="text-xs font-bold text-zinc-100 leading-snug line-clamp-1">${item.name}</h4>
-            <p class="text-[11px] text-emerald-400 font-medium">${item.whyBetter}</p>
-          </div>
-        </div>
+    if (prod.healthyAlternatives && Array.isArray(prod.healthyAlternatives) && prod.healthyAlternatives.length > 0) {
+      this.renderAlternativesItems(prod.healthyAlternatives);
+    } else {
+      this.generateLiveAiSwaps(false);
+    }
+  },
 
-        <div class="grid grid-cols-4 gap-1 py-1.5 px-2.5 rounded-xl bg-zinc-950 border border-zinc-800/80 text-center">
-          <div><span class="text-[9px] text-zinc-500 block">Calories</span><span class="text-[11px] font-mono font-bold text-zinc-200">${item.calories}</span></div>
-          <div><span class="text-[9px] text-zinc-500 block">Protein</span><span class="text-[11px] font-mono font-bold text-emerald-400">${item.protein}g</span></div>
-          <div><span class="text-[9px] text-zinc-500 block">Sugar</span><span class="text-[11px] font-mono font-bold text-zinc-300">${item.sugar}g</span></div>
-          <div><span class="text-[9px] text-zinc-500 block">Fiber</span><span class="text-[11px] font-mono font-bold text-cyan-400">${item.fiber}g</span></div>
-        </div>
+  async generateLiveAiSwaps(forceLive = false) {
+    const container = document.getElementById("alternatives-items-list");
+    const refreshBtn = document.getElementById("btn-refresh-ai-swaps");
+    if (!container) return;
 
-        <div class="flex items-center justify-between pt-1 text-xs">
-          <span class="text-[10px] text-zinc-400 italic">💡 ${item.difference}</span>
-          <button class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold transition-colors flex items-center gap-1 shrink-0" onclick="app.addSwapToPantry('${item.name.replace(/'/g, "\\'")}', '${item.brand.replace(/'/g, "\\'")}', '${item.image}')">
-            + Add to Pantry
-          </button>
+    const prod = state.currentProductData || {};
+    const n = prod.nutrition || {};
+
+    if (!state.gemini.apiKey) {
+      // If no API key, fallback to categorized smart alternatives
+      const fallbackItems = this.getAlternativesForCategory(prod.category, prod.productName);
+      this.renderAlternativesItems(fallbackItems);
+      return;
+    }
+
+    // Show sleek loading state
+    container.innerHTML = `
+      <div class="py-8 px-4 text-center space-y-3">
+        <div class="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mx-auto"></div>
+        <div class="space-y-1">
+          <h4 class="text-xs font-bold text-zinc-100">Generating AI Swaps...</h4>
+          <p class="text-[11px] text-zinc-400">Gemini is finding cleaner, commercially available alternatives matching your ${state.profile.userGoal.replace(/_/g, ' ')} goal.</p>
         </div>
       </div>
-    `).join("");
+    `;
 
-    sheet.classList.add("open");
+    if (refreshBtn) refreshBtn.classList.add("opacity-50", "pointer-events-none");
+
+    try {
+      const apiKey = state.gemini.apiKey;
+      const model = state.gemini.model || "gemini-2.5-flash";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const prompt = `
+You are an expert clinical dietitian and food alternatives specialist.
+The user is evaluating this specific food item:
+- Scanned Product: "${prod.productName || 'Food Item'}"
+- Brand: "${prod.brand || 'Commercial Brand'}"
+- Category: "${prod.category || 'Packaged Food'}"
+- Nutritional Profile: Calories: ${n.calories || 0}, Protein: ${n.protein || 0}g, Sugar: ${n.sugar || 0}g, Fat: ${n.fat || 0}g, Fiber: ${n.fiber || 0}g, Sodium: ${n.sodium || 0}mg
+- Ingredients: "${prod.ingredients || 'Not listed'}"
+- User Health Goal: "${state.profile.userGoal}"
+- Dietary Preference: "${state.profile.dietPreference}"
+- Health Conditions: "${(state.profile.healthConditions || []).join(', ') || 'None'}"
+
+TASK:
+Generate 3 to 4 REAL, POPULAR, COMMERCIALLY AVAILABLE branded food products that serve as cleaner and healthier alternatives to this exact item.
+Ensure each recommendation directly addresses the flaws of the scanned item (e.g. lower sugar, cleaner oils, higher protein, zero artificial sweeteners/dyes).
+
+Return STRICTLY a valid JSON array without markdown formatting:
+[
+  {
+    "name": "Exact real brand product name",
+    "brand": "Manufacturer/Brand",
+    "whyBetter": "Specific clinical reason why this swap is superior to ${prod.productName || 'the scanned food'}",
+    "badge": "e.g. High Protein / Zero Sugar / Clean Seedless Oil / Low Glycemic",
+    "calories": 150,
+    "protein": 12.0,
+    "sugar": 2.0,
+    "fiber": 4.0,
+    "difference": "Key macro or clean-label advantage (e.g. -14g sugar, zero palm oil)",
+    "imageKeyword": "snack bar / chips / yogurt / dark chocolate / oats / herbal tea / cracker"
+  }
+]`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { response_mime_type: "application/json" }
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Gemini status ${res.status}`);
+      }
+
+      const jsonRes = await res.json();
+      const rawText = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text;
+      const aiItems = JSON.parse(rawText || "[]");
+
+      if (Array.isArray(aiItems) && aiItems.length > 0) {
+        if (!state.currentProductData) state.currentProductData = {};
+        state.currentProductData.healthyAlternatives = aiItems;
+        this.renderAlternativesItems(aiItems);
+        this.showToast("Generated new AI food swaps!");
+      } else {
+        throw new Error("Empty AI recommendations received");
+      }
+    } catch (err) {
+      console.warn("Live AI swaps fallback:", err);
+      const fallbackItems = this.getAlternativesForCategory(prod.category, prod.productName);
+      this.renderAlternativesItems(fallbackItems);
+      this.showToast("Loaded smart alternative swaps.");
+    } finally {
+      if (refreshBtn) refreshBtn.classList.remove("opacity-50", "pointer-events-none");
+    }
+  },
+
+  renderAlternativesItems(items) {
+    const container = document.getElementById("alternatives-items-list");
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+      container.innerHTML = `<div class="p-4 text-center text-xs text-zinc-400">No alternatives found for this item.</div>`;
+      return;
+    }
+
+    container.innerHTML = items.map(item => {
+      const imgUrl = this.resolveSwapImage(item);
+      const safeName = (item.name || "Clean Alternative").replace(/'/g, "\\'");
+      const safeBrand = (item.brand || "Brand").replace(/'/g, "\\'");
+
+      return `
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 space-y-3 hover:border-emerald-500/40 transition-all">
+          <div class="flex items-start gap-3">
+            <img src="${imgUrl}" alt="${item.name}" class="w-16 h-16 rounded-xl object-cover border border-zinc-800 shrink-0 bg-zinc-950" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1502741224143-90386d7f8c82?w=400&auto=format&fit=crop&q=80'" />
+            <div class="flex-1 min-w-0 space-y-1">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-mono font-semibold text-zinc-400 truncate">${item.brand || 'Brand'}</span>
+                <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shrink-0">${item.badge || 'AI Clean Swap'}</span>
+              </div>
+              <h4 class="text-xs font-bold text-zinc-100 leading-snug line-clamp-1">${item.name}</h4>
+              <p class="text-[11px] text-emerald-400 font-medium">${item.whyBetter}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1 py-1.5 px-2.5 rounded-xl bg-zinc-950 border border-zinc-800/80 text-center">
+            <div><span class="text-[9px] text-zinc-500 block">Calories</span><span class="text-[11px] font-mono font-bold text-zinc-200">${item.calories || 0}</span></div>
+            <div><span class="text-[9px] text-zinc-500 block">Protein</span><span class="text-[11px] font-mono font-bold text-emerald-400">${item.protein || 0}g</span></div>
+            <div><span class="text-[9px] text-zinc-500 block">Sugar</span><span class="text-[11px] font-mono font-bold text-zinc-300">${item.sugar || 0}g</span></div>
+            <div><span class="text-[9px] text-zinc-500 block">Fiber</span><span class="text-[11px] font-mono font-bold text-cyan-400">${item.fiber || 0}g</span></div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <span class="text-[10px] text-zinc-400 italic">💡 ${item.difference || 'Cleaner nutritional profile'}</span>
+            <button class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold transition-colors flex items-center gap-1 shrink-0 active:scale-95" onclick="app.addSwapToPantry('${safeName}', '${safeBrand}', '${imgUrl}')">
+              + Add to Pantry
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
   },
 
   closeAlternativesSheet() {
