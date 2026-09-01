@@ -1,49 +1,41 @@
-// FoodLens AI — Offline Cache & PWA Service Worker (Network First Strategy)
-const CACHE_NAME = "foodlens-v2";
-const ASSETS = [
-  "./",
-  "./index.html",
-  "./styles.css",
-  "./app.js",
-  "./manifest.json"
-];
+// FoodLens AI — No-Cache Service Worker
+// Enables PWA installation ("Add to Home Screen") & mobile notifications
+// Zero caching: Every request is fetched directly from the network for 100% fresh code.
 
 self.addEventListener("install", (e) => {
+  // Take control immediately and delete any previous caches
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
   );
 });
 
 self.addEventListener("activate", (e) => {
+  // Purge all legacy caches on activation
   e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-    })
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
 
+// Pass-through fetch handler (required for PWA installability without caching anything)
 self.addEventListener("fetch", (e) => {
-  // Pass-through non-GET and external APIs
-  if (e.request.method !== "GET" || e.request.url.includes("googleapis.com")) {
-    return;
-  }
+  e.respondWith(fetch(e.request));
+});
 
-  // Network-First: Always fetch newest files from GitHub Pages / server, fallback to cache offline
-  e.respondWith(
-    fetch(e.request)
-      .then((networkRes) => {
-        if (networkRes && networkRes.status === 200) {
-          const resClone = networkRes.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+// Support for system / lock screen notification clicks
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          return client.focus();
         }
-        return networkRes;
-      })
-      .catch(() => caches.match(e.request))
+      }
+      if (clients.openWindow) {
+        return clients.openWindow("./");
+      }
+    })
   );
 });
