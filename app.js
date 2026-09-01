@@ -532,26 +532,61 @@ const app = {
 
   snapCamera() {
     const video = document.getElementById("camera-stream-video");
+    const viewport = document.getElementById("cam-viewport");
+    const focusBox = document.getElementById("scanner-focus-box");
     const canvas = document.createElement("canvas");
-    const z = state.cameraZoom || 1.0;
-    const w = video.videoWidth || 640;
-    const h = video.videoHeight || 480;
-    canvas.width = w;
-    canvas.height = h;
     const ctx = canvas.getContext("2d");
 
-    // Crop zoomed region accurately onto snapshot
-    if (z > 1.0) {
-      const cropW = w / z;
-      const cropH = h / z;
-      const cropX = (w - cropW) / 2;
-      const cropY = (h - cropH) / 2;
-      ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, w, h);
+    const z = state.cameraZoom || 1.0;
+    const videoW = video.videoWidth || 1280;
+    const videoH = video.videoHeight || 720;
+
+    let srcX = 0, srcY = 0, srcW = videoW, srcH = videoH;
+
+    if (viewport && focusBox && viewport.clientWidth > 0 && viewport.clientHeight > 0) {
+      const viewW = viewport.clientWidth;
+      const viewH = viewport.clientHeight;
+      const boxW = focusBox.clientWidth;
+      const boxH = focusBox.clientHeight;
+      const boxX = focusBox.offsetLeft;
+      const boxY = focusBox.offsetTop;
+
+      // Calculate object-cover dimensions of video rendered inside viewport
+      const scale = Math.max(viewW / videoW, viewH / videoH);
+      const renderW = videoW * scale;
+      const renderH = videoH * scale;
+      const offsetX = (viewW - renderW) / 2;
+      const offsetY = (viewH - renderH) / 2;
+
+      // Map focusBox coordinates to raw video coordinates with digital zoom factor
+      const mapCoordX = (pX) => (((pX - viewW / 2) / z + viewW / 2) - offsetX) / renderW * videoW;
+      const mapCoordY = (pY) => (((pY - viewH / 2) / z + viewH / 2) - offsetY) / renderH * videoH;
+
+      const x1 = Math.max(0, Math.min(videoW, mapCoordX(boxX)));
+      const y1 = Math.max(0, Math.min(videoH, mapCoordY(boxY)));
+      const x2 = Math.max(0, Math.min(videoW, mapCoordX(boxX + boxW)));
+      const y2 = Math.max(0, Math.min(videoH, mapCoordY(boxY + boxH)));
+
+      srcX = x1;
+      srcY = y1;
+      srcW = Math.max(20, x2 - x1);
+      srcH = Math.max(20, y2 - y1);
     } else {
-      ctx.drawImage(video, 0, 0, w, h);
+      if (z > 1.0) {
+        srcW = videoW / z;
+        srcH = videoH / z;
+        srcX = (videoW - srcW) / 2;
+        srcY = (videoH - srcH) / 2;
+      }
     }
 
-    const fullUrl = canvas.toDataURL("image/jpeg", 0.88);
+    // Canvas outputs strictly what was inside the green scanner frame
+    canvas.width = Math.round(srcW);
+    canvas.height = Math.round(srcH);
+
+    ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
+
+    const fullUrl = canvas.toDataURL("image/jpeg", 0.90);
     const base64Data = fullUrl.split(",")[1];
 
     state.images[state.currentStep] = {
@@ -562,7 +597,7 @@ const app = {
 
     this.closeCamera();
     this.updateWizardStep(state.currentStep);
-    this.showToast(`Angle ${state.currentStep} captured at ${z.toFixed(1)}x zoom`);
+    this.showToast(`Angle ${state.currentStep} cropped to scanner frame`);
   },
 
   // -------------------------------------------------------------

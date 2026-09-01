@@ -1,16 +1,15 @@
 # FoodLens AI — Mobile Food Scanner, Expiry Tracker, Medical Impact & AI Chat
 
-**FoodLens AI** is a Progressive Web App (PWA) with live camera zoom controls, native mobile device notifications, fullscreen standalone display mode, food verification, and clinical health condition intelligence.
+**FoodLens AI** is a Progressive Web App (PWA) with live camera zoom controls, target viewfinder box auto-cropping, native mobile device notifications, fullscreen standalone display mode, food verification, and clinical health condition intelligence.
 
 ---
 
-## 🤖 Supported Gemini Vision Models
+## 🎯 Target Viewfinder Box Auto-Cropping
 
-- **`gemini-2.5-flash`** (Recommended Vision Default — Fast, robust OCR & nutrition analysis)
-- **`gemini-3.5-flash-lite`** (Flash Lite model recommended by Gemini API)
-- **`gemini-2.0-flash`** (Fast & Stable production endpoint)
-- **`gemini-1.5-flash`** (Standard multimodal model)
-- **`gemini-2.5-pro`** (High precision deep analysis)
+When capturing a label photo:
+- **Only what is inside the green dashed scanner box is captured and uploaded**.
+- Surrounding background noise (tables, fingers, room clutter) is automatically cut out.
+- Zoom levels (`1x`, `1.5x`, `2x`, `3x` & slider) apply directly within the target box for high-resolution nutrition facts and ingredients OCR.
 
 ---
 
