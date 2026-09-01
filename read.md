@@ -4,11 +4,13 @@
 
 ---
 
-## 🤖 Google Gemini Vision API Configuration
+## 🤖 Supported Gemini Vision Models
 
-- **Recommended Production Model**: `gemini-2.5-flash` (Stable multimodal vision & OCR).
-- **Supported Models**: `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-2.5-pro`.
-- **Automatic 404 Fallback**: If an outdated or decommissioned model endpoint (such as `flash-lite`) is queried, the app automatically falls back to `gemini-2.5-flash` seamlessly.
+- **`gemini-2.5-flash`** (Recommended Vision Default — Fast, robust OCR & nutrition analysis)
+- **`gemini-3.5-flash-lite`** (Flash Lite model recommended by Gemini API)
+- **`gemini-2.0-flash`** (Fast & Stable production endpoint)
+- **`gemini-1.5-flash`** (Standard multimodal model)
+- **`gemini-2.5-pro`** (High precision deep analysis)
 
 ---
 
