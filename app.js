@@ -7,6 +7,13 @@
 // Default Initial Expiry Items for Pantry Tracking (Empty by default)
 const INITIAL_EXPIRY_ITEMS = [];
 
+// Resolve model (auto-migrate deprecated models)
+let initialModel = localStorage.getItem("foodlens_gemini_model") || "gemini-2.5-flash";
+if (initialModel === "gemini-2.5-flash-lite") {
+  initialModel = "gemini-2.5-flash";
+  localStorage.setItem("foodlens_gemini_model", "gemini-2.5-flash");
+}
+
 // App State
 const state = {
   currentStep: 1, // 1: Front, 2: Nutrition, 3: Ingredients
@@ -32,7 +39,7 @@ const state = {
   },
   gemini: {
     apiKey: localStorage.getItem("foodlens_gemini_key") || "",
-    model: localStorage.getItem("foodlens_gemini_model") || "gemini-2.5-flash"
+    model: initialModel
   }
 };
 
@@ -652,7 +659,7 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
       }
     }
 
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -660,6 +667,26 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
         generationConfig: { response_mime_type: "application/json" }
       })
     });
+
+    // Auto-fallback if model returns 404 (deprecated/decommissioned model)
+    if (res.status === 404) {
+      console.warn(`Model ${model} returned 404, attempting fallback to gemini-2.5-flash...`);
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      res = await fetch(fallbackUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: parts }],
+          generationConfig: { response_mime_type: "application/json" }
+        })
+      });
+
+      if (res.ok) {
+        state.gemini.model = "gemini-2.5-flash";
+        localStorage.setItem("foodlens_gemini_model", "gemini-2.5-flash");
+        this.updateApiBadge();
+      }
+    }
 
     if (!res.ok) {
       const errBody = await res.text();
@@ -1141,8 +1168,8 @@ User Health Profile:
 Please answer the user's question concisely, objectively, and scientifically based strictly on the product label, medical risks, and nutrition facts. Use clean, formatted paragraphs or bullet points without complex markdown tables. Keep answers under 120 words unless detailed recipe advice is requested.
 `;
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(endpoint, {
+      let endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      let res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1156,6 +1183,24 @@ Please answer the user's question concisely, objectively, and scientifically bas
           ]
         })
       });
+
+      if (res.status === 404) {
+        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: systemContext },
+                  { text: `User Question: ${query}` }
+                ]
+              }
+            ]
+          })
+        });
+      }
 
       if (!res.ok) {
         const errTxt = await res.text();
