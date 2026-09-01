@@ -22,7 +22,8 @@ const state = {
   profile: {
     userGoal: "MUSCLE_GAIN",
     dietPreference: "NO_PREFERENCE",
-    allergies: []
+    allergies: [],
+    healthConditions: []
   },
   notifications: {
     enabled: localStorage.getItem("foodlens_notif_enabled") !== "false", // Default true
@@ -741,6 +742,91 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
       return { claim: c, isValid, reason };
     });
 
+    // 6. Medical & Health Condition Clinical Evaluation
+    const healthConditions = state.profile.healthConditions || [];
+    const conditionImpacts = healthConditions.map(cond => {
+      const cLow = cond.toLowerCase();
+      let status = "SAFE";
+      let statusLabel = "Safe for Consumption";
+      let badgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+      let reason = "No adverse clinical triggers detected in the nutritional breakdown or ingredients list.";
+
+      if (cLow.includes("hypertension") || cLow.includes("bp") || cLow.includes("blood pressure")) {
+        if (sodium >= 480) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `High sodium (${sodium}mg, >21% Daily Value) can promote fluid retention and blood pressure spikes.`;
+        } else if (sodium >= 220) {
+          status = "CAUTION";
+          statusLabel = "Moderate / Caution";
+          badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/30";
+          reason = `Moderate sodium content (${sodium}mg). Balance with low-sodium meals to keep daily intake below 1,500mg.`;
+        }
+      } else if (cLow.includes("diabet") || cLow.includes("sugar") || cLow.includes("insulin") || cLow.includes("glycem")) {
+        if (sugar >= 10 || ingText.includes("high fructose") || ingText.includes("maltodextrin")) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `High sugar load (${sugar}g) or fast-digesting starches can induce sharp postprandial glucose spikes.`;
+        } else if (sugar >= 5 || parseFloat(n.carbohydrates || 0) >= 25) {
+          status = "CAUTION";
+          statusLabel = "Caution";
+          badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/30";
+          reason = `Moderate carbohydrate impact (${sugar}g sugar). Pair with dietary fiber or protein to slow absorption.`;
+        }
+      } else if (cLow.includes("cholesterol") || cLow.includes("heart") || cLow.includes("cardio") || cLow.includes("artery")) {
+        if (satFat >= 4.5 || ingText.includes("palm oil") || ingText.includes("hydrogenated")) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `Elevated saturated fat (${satFat}g) or atherogenic palm oils can elevate circulating LDL-C.`;
+        } else if (satFat >= 2.5) {
+          status = "CAUTION";
+          statusLabel = "Caution";
+          badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/30";
+          reason = `Moderate saturated fat (${satFat}g). Keep daily saturated fat below 10-15g.`;
+        }
+      } else if (cLow.includes("gerd") || cLow.includes("reflux") || cLow.includes("heartburn") || cLow.includes("acid")) {
+        if (ingText.includes("citric acid") || ingText.includes("caffeine") || ingText.includes("peppermint") || ingText.includes("chili") || ingText.includes("cocoa") || ingText.includes("tomato")) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `Contains known lower-esophageal sphincter relaxers or acidic irritants (citric acid / caffeine / spices).`;
+        }
+      } else if (cLow.includes("liver") || cLow.includes("nafld") || cLow.includes("hepatic")) {
+        if (ingText.includes("high fructose") || sugar >= 14) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `High fructose levels accelerate hepatic de novo lipogenesis, promoting intrahepatic fat accumulation.`;
+        }
+      } else if (cLow.includes("gout") || cLow.includes("uric")) {
+        if (ingText.includes("high fructose") || sugar >= 14 || ingText.includes("yeast")) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `Fructose metabolism degrades ATP into purines, which can drive up serum uric acid levels.`;
+        }
+      } else if (cLow.includes("ibs") || cLow.includes("gut") || cLow.includes("bowel") || cLow.includes("fodmap")) {
+        if (ingText.includes("sorbitol") || ingText.includes("maltitol") || ingText.includes("xylitol") || ingText.includes("inulin") || ingText.includes("chicory")) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `Contains high-FODMAP sugar alcohols or fermentable fructans that can trigger gastrointestinal bloating and cramps.`;
+        }
+      } else if (cLow.includes("kidney") || cLow.includes("renal")) {
+        if (sodium >= 380 || ingText.includes("phosphate") || ingText.includes("phosphoric")) {
+          status = "HIGH_RISK";
+          statusLabel = "High Risk";
+          badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          reason = `Elevated sodium (${sodium}mg) or inorganic phosphate food additives place extra load on renal filtration.`;
+        }
+      }
+
+      return { condition: cond, status, statusLabel, badgeClass, reason };
+    });
+
     // Save into history
     const historyEntry = {
       id: "scan-" + Date.now(),
@@ -762,12 +848,13 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
       scores: { overall, grade, nutScore, ingScore, matchScore, valueScore },
       flagged,
       verifiedClaims,
+      conditionImpacts,
       costPer10gProtein
     });
   },
 
   renderAnalysisReport(data) {
-    const { product, scores, flagged, verifiedClaims, costPer10gProtein } = data;
+    const { product, scores, flagged, verifiedClaims, conditionImpacts, costPer10gProtein } = data;
     const n = product.nutrition || {};
 
     const invalidState = document.getElementById("invalid-food-state");
@@ -833,6 +920,31 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
     document.getElementById("p4-bar").style.width = `${scores.valueScore}%`;
     document.getElementById("p4-desc").textContent = `$${costPer10gProtein.toFixed(2)} / 10g protein • ${scores.valueScore >= 75 ? 'Great Value' : 'Fair Value'}`;
 
+    // Medical Health Condition Impact List
+    const condContainer = document.getElementById("condition-impact-list");
+    if (condContainer) {
+      if (!conditionImpacts || conditionImpacts.length === 0) {
+        condContainer.innerHTML = `
+          <div class="p-3 rounded-xl border border-zinc-800/80 bg-zinc-950/60 text-xs text-zinc-400 flex items-center justify-between">
+            <span>No health conditions listed in your profile.</span>
+            <button class="text-emerald-400 text-[11px] font-medium hover:underline" onclick="app.switchTab('profile-tab')">+ Add Conditions</button>
+          </div>
+        `;
+      } else {
+        condContainer.innerHTML = conditionImpacts.map(ci => `
+          <div class="rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-3 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-zinc-200">${ci.condition}</span>
+              <span class="rounded-full px-2 py-0.5 text-[9px] font-semibold border ${ci.badgeClass}">
+                ${ci.statusLabel}
+              </span>
+            </div>
+            <p class="text-[11px] text-zinc-400 leading-relaxed">${ci.reason}</p>
+          </div>
+        `).join("");
+      }
+    }
+
     // Claims Buster
     const claimsWrap = document.getElementById("claims-list-wrap");
     if (verifiedClaims.length > 0) {
@@ -854,15 +966,17 @@ Return STRICT VALID JSON ONLY without markdown formatting or code fences.`;
     // Ingredients & Watchlist
     document.getElementById("raw-ingredients-text").textContent = product.ingredients || "No ingredients listed.";
     const flagWrap = document.getElementById("flagged-ingredients-wrap");
-    if (flagged.length > 0) {
-      flagWrap.innerHTML = flagged.map(f => `
-        <div class="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5 text-xs">
-          <span class="font-semibold text-rose-400 block text-[11px]">${f.key.toUpperCase()}</span>
-          <span class="text-zinc-400 text-[10px] mt-0.5">${f.reason}</span>
-        </div>
-      `).join("");
-    } else {
-      flagWrap.innerHTML = `<div class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-xs text-emerald-400">Clean ingredient formulation. No flagged additives found.</div>`;
+    if (flagWrap) {
+      if (flagged.length > 0) {
+        flagWrap.innerHTML = flagged.map(f => `
+          <div class="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5 text-xs">
+            <span class="font-semibold text-rose-400 block text-[11px]">${f.key.toUpperCase()}</span>
+            <span class="text-zinc-400 text-[10px] mt-0.5">${f.reason}</span>
+          </div>
+        `).join("");
+      } else {
+        flagWrap.innerHTML = `<div class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-xs text-emerald-400">Clean ingredient formulation. No flagged additives found.</div>`;
+      }
     }
 
     // Reset Chat Messages for this product
@@ -961,8 +1075,9 @@ User Health Profile:
 - Goal: ${state.profile.userGoal}
 - Diet Preference: ${state.profile.dietPreference}
 - Allergies: ${(state.profile.allergies || []).join(", ") || "None"}
+- Medical / Health Conditions: ${(state.profile.healthConditions || []).join(", ") || "None"}
 
-Please answer the user's question concisely, objectively, and scientifically based strictly on the product label and nutrition facts. Use clean, formatted paragraphs or bullet points without complex markdown tables. Keep answers under 120 words unless detailed recipe advice is requested.
+Please answer the user's question concisely, objectively, and scientifically based strictly on the product label, medical risks, and nutrition facts. Use clean, formatted paragraphs or bullet points without complex markdown tables. Keep answers under 120 words unless detailed recipe advice is requested.
 `;
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -1037,16 +1152,56 @@ Please answer the user's question concisely, objectively, and scientifically bas
   // -------------------------------------------------------------
   // Profile & Settings
   // -------------------------------------------------------------
+  // Profile & Settings
+  // -------------------------------------------------------------
   loadProfile() {
     const saved = localStorage.getItem("foodlens_profile");
     if (saved) {
       try {
         state.profile = JSON.parse(saved);
+        if (!state.profile.healthConditions) state.profile.healthConditions = [];
         const radio = document.querySelector(`input[name="userGoal"][value="${state.profile.userGoal}"]`);
         if (radio) radio.checked = true;
         document.getElementById("profile-diet-select").value = state.profile.dietPreference || "NO_PREFERENCE";
         document.getElementById("profile-allergies-input").value = (state.profile.allergies || []).join(", ");
+        
+        const condInput = document.getElementById("profile-conditions-input");
+        if (condInput) {
+          condInput.value = (state.profile.healthConditions || []).join(", ");
+        }
+
+        // Highlight active condition pills
+        document.querySelectorAll(".cond-pill").forEach(pill => {
+          const cName = pill.dataset.cond;
+          if (state.profile.healthConditions.includes(cName)) {
+            pill.classList.add("bg-emerald-500/10", "border-emerald-500/30", "text-emerald-400");
+            pill.classList.remove("border-zinc-800", "bg-zinc-950", "text-zinc-300");
+          } else {
+            pill.classList.remove("bg-emerald-500/10", "border-emerald-500/30", "text-emerald-400");
+            pill.classList.add("border-zinc-800", "bg-zinc-950", "text-zinc-300");
+          }
+        });
       } catch (e) {}
+    }
+  },
+
+  toggleConditionPill(pillBtn, conditionName) {
+    if (!state.profile.healthConditions) state.profile.healthConditions = [];
+    const index = state.profile.healthConditions.indexOf(conditionName);
+
+    if (index > -1) {
+      state.profile.healthConditions.splice(index, 1);
+      pillBtn.classList.remove("bg-emerald-500/10", "border-emerald-500/30", "text-emerald-400");
+      pillBtn.classList.add("border-zinc-800", "bg-zinc-950", "text-zinc-300");
+    } else {
+      state.profile.healthConditions.push(conditionName);
+      pillBtn.classList.add("bg-emerald-500/10", "border-emerald-500/30", "text-emerald-400");
+      pillBtn.classList.remove("border-zinc-800", "bg-zinc-950", "text-zinc-300");
+    }
+
+    const condInput = document.getElementById("profile-conditions-input");
+    if (condInput) {
+      condInput.value = state.profile.healthConditions.join(", ");
     }
   },
 
@@ -1058,9 +1213,15 @@ Please answer the user's question concisely, objectively, and scientifically bas
     state.profile.dietPreference = document.getElementById("profile-diet-select").value;
     state.profile.allergies = document.getElementById("profile-allergies-input").value.split(",").map(s => s.trim()).filter(Boolean);
 
+    const condInput = document.getElementById("profile-conditions-input");
+    if (condInput) {
+      const typed = condInput.value.split(",").map(s => s.trim()).filter(Boolean);
+      state.profile.healthConditions = Array.from(new Set([...(state.profile.healthConditions || []), ...typed]));
+    }
+
     localStorage.setItem("foodlens_profile", JSON.stringify(state.profile));
     this.renderHomeDashboard();
-    this.showToast("Health Profile Saved");
+    this.showToast("Health Profile & Medical Conditions Saved");
 
     if (state.currentProductData) {
       this.processAndSaveProduct(state.currentProductData);
