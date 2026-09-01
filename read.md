@@ -1,19 +1,16 @@
 # FoodLens AI — Mobile Food Scanner, Expiry Tracker, Medical Impact & AI Chat
 
-**FoodLens AI** is a Progressive Web App (PWA) with live camera zoom, native mobile device notifications, fullscreen standalone display mode, food verification, and clinical health condition intelligence.
+**FoodLens AI** is a Progressive Web App (PWA) with live camera zoom controls, native mobile device notifications, fullscreen standalone display mode, food verification, and clinical health condition intelligence.
 
 ---
 
-## 🔍 Prominent Live Camera Zoom Controls
+## 🔍 Live Camera Zoom Controls (While Scanning)
 
-When you tap **Take Photo** in the scanner wizard, the camera modal opens with high-visibility zoom controls:
-1. **Quick Zoom Buttons**:
-   - **`[ 1x ]`** Standard wide angle
-   - **`[ 1.5x ]`** Clear package framing
-   - **`[ 2x ]`** Macro zoom for reading fine nutrition tables
-   - **`[ 3x ]`** High-magnification zoom for tiny ingredients lists
-2. **Fine-Tuning Slider**: Smooth continuous adjustment from `1.0x` to `3.0x` with live badge feedback (`2.0x`).
-3. **Accurate Zoomed Snapshotting**: Crops the zoomed view into high-resolution images for Gemini Vision OCR.
+When you tap **Take Photo** in the scanner wizard, the camera modal displays:
+1. **Zoom Slider**: Horizontal range slider positioned directly above the shutter button for continuous zoom from **1.0x to 3.0x**.
+2. **Quick Preset Buttons**: Dedicated **`[ 1x ]`**, **`[ 1.5x ]`**, **`[ 2x ]`**, and **`[ 3x ]`** tactile buttons.
+3. **Live Zoom Badge**: Real-time zoom level indicator (`1.0x` / `2.0x`) in the top right header.
+4. **Accurate Zoomed Snapshotting**: Crops the zoomed view into high-resolution images for Gemini Vision OCR.
 
 ---
 
@@ -28,3 +25,4 @@ Open in your browser or mobile phone:
 ```
 http://localhost:8080
 ```
+*(Please do a quick hard refresh or reload `http://localhost:8080` to ensure your browser loads the latest camera layout).*

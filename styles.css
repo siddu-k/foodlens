@@ -189,6 +189,48 @@ body {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
 
+/* Camera Zoom Controls */
+.cam-zoom-btn {
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.cam-zoom-btn.active {
+  background-color: #10b981 !important;
+  color: #09090b !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+#cam-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #27272a;
+  outline: none;
+  border-radius: 9999px;
+}
+
+#cam-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+#cam-zoom-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  border: none;
+}
+
 .hidden {
   display: none !important;
 }
