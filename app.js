@@ -448,14 +448,26 @@ const app = {
   // -------------------------------------------------------------
   // Live Camera
   // -------------------------------------------------------------
+  // -------------------------------------------------------------
+  // Live Camera with Hardware & Digital Zoom
+  // -------------------------------------------------------------
   openCamera() {
     const modal = document.getElementById("live-camera-modal");
     const video = document.getElementById("camera-stream-video");
     modal.classList.remove("hidden");
+    this.setCameraZoom(1.0);
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    })
       .then((stream) => {
         video.srcObject = stream;
+        const track = stream.getVideoTracks()[0];
+        this.cameraTrack = track;
         video.play();
       })
       .catch((err) => {
@@ -465,6 +477,42 @@ const app = {
       });
   },
 
+  setCameraZoom(zoomLevel) {
+    const clamped = Math.min(Math.max(parseFloat(zoomLevel) || 1.0, 1.0), 3.0);
+    state.cameraZoom = clamped;
+
+    const badge = document.getElementById("zoom-level-badge");
+    const slider = document.getElementById("cam-zoom-slider");
+    const video = document.getElementById("camera-stream-video");
+
+    if (badge) badge.textContent = `${clamped.toFixed(1)}x`;
+    if (slider) slider.value = clamped;
+    if (video) video.style.transform = `scale(${clamped})`;
+
+    // Highlight active preset button
+    document.querySelectorAll(".cam-zoom-btn").forEach(btn => {
+      const bZ = parseFloat(btn.dataset.zoom);
+      if (Math.abs(bZ - clamped) < 0.15) {
+        btn.className = "cam-zoom-btn active text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500 text-zinc-950 transition-all";
+      } else {
+        btn.className = "cam-zoom-btn text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full text-zinc-300 hover:text-white transition-all";
+      }
+    });
+
+    // Try hardware camera zoom if supported by mobile sensor
+    if (this.cameraTrack && typeof this.cameraTrack.getCapabilities === "function") {
+      try {
+        const caps = this.cameraTrack.getCapabilities();
+        if (caps.zoom) {
+          const minZ = caps.zoom.min || 1;
+          const maxZ = caps.zoom.max || 3;
+          const targetZ = Math.min(Math.max(clamped, minZ), maxZ);
+          this.cameraTrack.applyConstraints({ advanced: [{ zoom: targetZ }] }).catch(() => {});
+        }
+      } catch (e) {}
+    }
+  },
+
   closeCamera() {
     const modal = document.getElementById("live-camera-modal");
     const video = document.getElementById("camera-stream-video");
@@ -472,18 +520,32 @@ const app = {
       video.srcObject.getTracks().forEach(t => t.stop());
       video.srcObject = null;
     }
+    this.cameraTrack = null;
     modal.classList.add("hidden");
   },
 
   snapCamera() {
     const video = document.getElementById("camera-stream-video");
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    const z = state.cameraZoom || 1.0;
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const fullUrl = canvas.toDataURL("image/jpeg", 0.85);
+    // Crop zoomed region accurately onto snapshot
+    if (z > 1.0) {
+      const cropW = w / z;
+      const cropH = h / z;
+      const cropX = (w - cropW) / 2;
+      const cropY = (h - cropH) / 2;
+      ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, w, h);
+    } else {
+      ctx.drawImage(video, 0, 0, w, h);
+    }
+
+    const fullUrl = canvas.toDataURL("image/jpeg", 0.88);
     const base64Data = fullUrl.split(",")[1];
 
     state.images[state.currentStep] = {
@@ -494,7 +556,7 @@ const app = {
 
     this.closeCamera();
     this.updateWizardStep(state.currentStep);
-    this.showToast(`Angle ${state.currentStep} photo captured`);
+    this.showToast(`Angle ${state.currentStep} captured at ${z.toFixed(1)}x zoom`);
   },
 
   // -------------------------------------------------------------
