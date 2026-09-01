@@ -1247,7 +1247,8 @@ Please answer the user's question concisely, objectively, and scientifically bas
   },
 
   // -------------------------------------------------------------
-  // Mobile Push Notification Settings (Active / Deactive)
+  // -------------------------------------------------------------
+  // Mobile Push Notification Settings & Permission Pipeline
   // -------------------------------------------------------------
   checkNotificationPermission() {
     const badge = document.getElementById("notif-permission-badge");
@@ -1255,18 +1256,35 @@ Please answer the user's question concisely, objectively, and scientifically bas
     const subtext = document.getElementById("notif-subtext-status");
     const expToggle = document.getElementById("toggle-expiry-alerts");
     const digestToggle = document.getElementById("toggle-daily-digest");
+    const homeBanner = document.getElementById("home-notif-prompt-banner");
 
     if (expToggle) expToggle.checked = state.notifications.expiryAlerts;
     if (digestToggle) digestToggle.checked = state.notifications.dailyDigest;
 
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
+
     if (!("Notification" in window)) {
-      if (badge) {
-        badge.textContent = "Unsupported";
-        badge.className = "text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-800 text-zinc-500";
-      }
-      if (btn) {
-        btn.textContent = "Unsupported";
-        btn.disabled = true;
+      if (isIos && !isStandalone) {
+        if (badge) {
+          badge.textContent = "Requires Home Screen";
+          badge.className = "text-[10px] font-mono px-2 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-400";
+        }
+        if (btn) {
+          btn.textContent = "Add to Home Screen";
+          btn.className = "h-7 px-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 font-semibold text-xs";
+          btn.disabled = false;
+        }
+        if (subtext) subtext.textContent = "iOS notifications require saving app to Home Screen";
+      } else {
+        if (badge) {
+          badge.textContent = "Unsupported";
+          badge.className = "text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-800 text-zinc-500";
+        }
+        if (btn) {
+          btn.textContent = "Unsupported";
+          btn.disabled = true;
+        }
       }
       return;
     }
@@ -1279,11 +1297,12 @@ Please answer the user's question concisely, objectively, and scientifically bas
         badge.className = "text-[10px] font-mono px-2 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-400 font-semibold";
       }
       if (btn) {
-        btn.textContent = "Blocked";
-        btn.className = "h-7 px-3 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 font-semibold text-xs opacity-60 cursor-not-allowed";
-        btn.disabled = true;
+        btn.textContent = "Blocked (Tap for Help)";
+        btn.className = "h-7 px-3 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 font-semibold text-xs transition-colors";
+        btn.disabled = false;
       }
-      if (subtext) subtext.textContent = "Permission blocked in browser settings";
+      if (subtext) subtext.textContent = "Tap 🔒 in browser address bar to allow alerts";
+      if (homeBanner) homeBanner.classList.add("hidden");
       return;
     }
 
@@ -1298,13 +1317,14 @@ Please answer the user's question concisely, objectively, and scientifically bas
         btn.className = "h-7 px-3 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-semibold text-xs shadow-sm transition-colors";
         btn.disabled = false;
       }
-      if (subtext) subtext.textContent = "Alerts are currently active";
+      if (subtext) subtext.textContent = "Device push alerts are active";
       if (expToggle) expToggle.disabled = false;
       if (digestToggle) digestToggle.disabled = false;
+      if (homeBanner) homeBanner.classList.add("hidden");
     } else {
       // Notifications are deactivated or not yet granted
       if (badge) {
-        badge.textContent = "Deactivated";
+        badge.textContent = browserPerm === "default" ? "Permission Needed" : "Deactivated";
         badge.className = "text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900 text-zinc-400";
       }
       if (btn) {
@@ -1315,12 +1335,44 @@ Please answer the user's question concisely, objectively, and scientifically bas
       if (subtext) subtext.textContent = "Alerts are paused/muted";
       if (expToggle) expToggle.disabled = true;
       if (digestToggle) digestToggle.disabled = true;
+
+      // Show friendly banner on home tab if default
+      if (browserPerm === "default" && homeBanner && !sessionStorage.getItem("foodlens_notif_dismissed")) {
+        homeBanner.classList.remove("hidden");
+      }
     }
   },
 
+  dismissNotifBanner() {
+    sessionStorage.setItem("foodlens_notif_dismissed", "true");
+    const homeBanner = document.getElementById("home-notif-prompt-banner");
+    if (homeBanner) homeBanner.classList.add("hidden");
+  },
+
+  async requestMobileNotificationPermission() {
+    await this.toggleNotificationMaster();
+    const homeBanner = document.getElementById("home-notif-prompt-banner");
+    if (homeBanner) homeBanner.classList.add("hidden");
+  },
+
   async toggleNotificationMaster() {
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
+
+    // Special handling for iOS Safari
+    if (isIos && !isStandalone && !("Notification" in window)) {
+      this.showToast("On iPhone, tap Share ➔ 'Add to Home Screen' to enable notifications.");
+      return;
+    }
+
     if (!("Notification" in window)) {
       this.showToast("Notifications are not supported in this browser.");
+      return;
+    }
+
+    // If blocked in browser settings
+    if (Notification.permission === "denied") {
+      this.showToast("Notifications blocked. Tap the 🔒 icon in your browser URL bar to allow.");
       return;
     }
 
@@ -1333,7 +1385,7 @@ Please answer the user's question concisely, objectively, and scientifically bas
       return;
     }
 
-    // If currently disabled, request permission if needed and activate
+    // If currently disabled, request permission
     try {
       let perm = Notification.permission;
       if (perm !== "granted") {
@@ -1354,11 +1406,11 @@ Please answer the user's question concisely, objectively, and scientifically bas
       }
     } catch (e) {
       console.warn("Notification error:", e);
-      this.showToast("Could not activate notifications.");
+      this.showToast("Could not activate notifications. Check browser settings.");
     }
   },
 
-  sendTestNotification() {
+  async sendTestNotification() {
     if (!state.notifications.enabled) {
       this.showToast("Cannot send alert: Notifications are deactivated.");
       return;
@@ -1367,6 +1419,25 @@ Please answer the user's question concisely, objectively, and scientifically bas
     const title = "FoodLens Pantry Alert";
     const body = "Your food item will expire in 2 days. Use it soon!";
 
+    // Prefer Service Worker showNotification for background mobile lock screen support
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(title, {
+          body: body,
+          icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%2309090b'/><path d='M20 50h60M50 20v60' stroke='%2310b981' stroke-width='8'/></svg>",
+          badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%2310b981'/></svg>",
+          vibrate: [200, 100, 200],
+          tag: "foodlens-expiry-alert"
+        });
+        this.showToast("Sent mobile device notification!");
+        return;
+      } catch (err) {
+        console.warn("Service worker notification failed, using fallback:", err);
+      }
+    }
+
+    // Fallback to standard Window Notification
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, {
         body: body,
@@ -1374,7 +1445,7 @@ Please answer the user's question concisely, objectively, and scientifically bas
       });
       this.showToast("Sent device notification!");
     } else {
-      this.showToast(`In-App Notification: ${body}`);
+      this.showToast(`In-App Alert: ${body}`);
     }
   },
 
@@ -1478,6 +1549,63 @@ Please answer the user's question concisely, objectively, and scientifically bas
     }
 
     document.getElementById("health-profile-form").addEventListener("submit", (e) => this.saveProfile(e));
+
+    // Register Service Worker for PWA
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(err => {
+        console.warn("Service Worker registration failed:", err);
+      });
+    }
+
+    // Capture PWA beforeinstallprompt
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      this.deferredInstallPrompt = e;
+      const installBtn = document.getElementById("btn-pwa-install");
+      if (installBtn) {
+        installBtn.classList.remove("hidden");
+      }
+    });
+  },
+
+  toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {
+          this.showToast("Add to Home Screen for automatic fullscreen mode.");
+        });
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      } else {
+        this.showToast("Add to Home Screen for automatic fullscreen mode.");
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  },
+
+  promptPwaInstall() {
+    if (this.deferredInstallPrompt) {
+      this.deferredInstallPrompt.prompt();
+      this.deferredInstallPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === "accepted") {
+          this.showToast("Installing FoodLens Standalone App...");
+        }
+        this.deferredInstallPrompt = null;
+      });
+    } else {
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIos) {
+        this.showToast("iOS: Tap Share button ➔ 'Add to Home Screen'");
+      } else {
+        this.showToast("Tap browser menu (⋮) ➔ 'Add to Home Screen' / 'Install App'");
+      }
+    }
   },
 
   showToast(msg) {

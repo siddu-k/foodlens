@@ -1,0 +1,18 @@
+{
+  "name": "FoodLens AI — Food Label Intelligence & Expiry Tracker",
+  "short_name": "FoodLens",
+  "description": "Smart food label scanner, expiry date tracker, and medical health impact intelligence.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%2309090b'/><path d='M20 50h60M50 20v60M28 28l44 44M28 72L72 28' stroke='%2310b981' stroke-width='8' stroke-linecap='round'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
