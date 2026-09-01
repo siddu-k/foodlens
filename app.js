@@ -504,19 +504,6 @@ const app = {
         btn.className = "cam-zoom-btn text-xs font-mono font-bold px-3 py-1 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white transition-all";
       }
     });
-
-    // Try hardware camera zoom if supported by mobile sensor
-    if (this.cameraTrack && typeof this.cameraTrack.getCapabilities === "function") {
-      try {
-        const caps = this.cameraTrack.getCapabilities();
-        if (caps.zoom) {
-          const minZ = caps.zoom.min || 1;
-          const maxZ = caps.zoom.max || 3;
-          const targetZ = Math.min(Math.max(clamped, minZ), maxZ);
-          this.cameraTrack.applyConstraints({ advanced: [{ zoom: targetZ }] }).catch(() => {});
-        }
-      } catch (e) {}
-    }
   },
 
   closeCamera() {
@@ -537,56 +524,55 @@ const app = {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    const z = state.cameraZoom || 1.0;
+    if (!video || !viewport || !focusBox) {
+      this.closeCamera();
+      return;
+    }
+
     const videoW = video.videoWidth || 1280;
     const videoH = video.videoHeight || 720;
 
-    let srcX = 0, srcY = 0, srcW = videoW, srcH = videoH;
+    const z = state.cameraZoom || 1.0;
+    const vpRect = viewport.getBoundingClientRect();
+    const boxRect = focusBox.getBoundingClientRect();
 
-    if (viewport && focusBox && viewport.clientWidth > 0 && viewport.clientHeight > 0) {
-      const viewW = viewport.clientWidth;
-      const viewH = viewport.clientHeight;
-      const boxW = focusBox.clientWidth;
-      const boxH = focusBox.clientHeight;
-      const boxX = focusBox.offsetLeft;
-      const boxY = focusBox.offsetTop;
+    const viewW = vpRect.width || viewport.clientWidth;
+    const viewH = vpRect.height || viewport.clientHeight;
 
-      // Calculate object-cover dimensions of video rendered inside viewport
-      const scale = Math.max(viewW / videoW, viewH / videoH);
-      const renderW = videoW * scale;
-      const renderH = videoH * scale;
-      const offsetX = (viewW - renderW) / 2;
-      const offsetY = (viewH - renderH) / 2;
+    // Calculate exact object-fit: cover scaling and positioning of the video
+    const renderScale = Math.max(viewW / videoW, viewH / videoH);
+    const renderW = videoW * renderScale;
+    const renderH = videoH * renderScale;
+    const offsetX = (viewW - renderW) / 2;
+    const offsetY = (viewH - renderH) / 2;
 
-      // Map focusBox coordinates to raw video coordinates with digital zoom factor
-      const mapCoordX = (pX) => (((pX - viewW / 2) / z + viewW / 2) - offsetX) / renderW * videoW;
-      const mapCoordY = (pY) => (((pY - viewH / 2) / z + viewH / 2) - offsetY) / renderH * videoH;
+    // Exact pixel coordinates inside the green border (accounting for 2px border)
+    const boxLeft = Math.max(0, (boxRect.left - vpRect.left) + 2);
+    const boxTop = Math.max(0, (boxRect.top - vpRect.top) + 2);
+    const boxRight = Math.min(viewW, (boxRect.right - vpRect.left) - 2);
+    const boxBottom = Math.min(viewH, (boxRect.bottom - vpRect.top) - 2);
 
-      const x1 = Math.max(0, Math.min(videoW, mapCoordX(boxX)));
-      const y1 = Math.max(0, Math.min(videoH, mapCoordY(boxY)));
-      const x2 = Math.max(0, Math.min(videoW, mapCoordX(boxX + boxW)));
-      const y2 = Math.max(0, Math.min(videoH, mapCoordY(boxY + boxH)));
+    // Map screen coordinates back through CSS scale(z) centered at viewport center
+    const mapCoordX = (pX) => (((pX - viewW / 2) / z + viewW / 2) - offsetX) / renderScale;
+    const mapCoordY = (pY) => (((pY - viewH / 2) / z + viewH / 2) - offsetY) / renderScale;
 
-      srcX = x1;
-      srcY = y1;
-      srcW = Math.max(20, x2 - x1);
-      srcH = Math.max(20, y2 - y1);
-    } else {
-      if (z > 1.0) {
-        srcW = videoW / z;
-        srcH = videoH / z;
-        srcX = (videoW - srcW) / 2;
-        srcY = (videoH - srcH) / 2;
-      }
-    }
+    const x1 = Math.max(0, Math.min(videoW, mapCoordX(boxLeft)));
+    const y1 = Math.max(0, Math.min(videoH, mapCoordY(boxTop)));
+    const x2 = Math.max(0, Math.min(videoW, mapCoordX(boxRight)));
+    const y2 = Math.max(0, Math.min(videoH, mapCoordY(boxBottom)));
+
+    const srcX = Math.round(x1);
+    const srcY = Math.round(y1);
+    const srcW = Math.round(Math.max(20, x2 - x1));
+    const srcH = Math.round(Math.max(20, y2 - y1));
 
     // Canvas outputs strictly what was inside the green scanner frame
-    canvas.width = Math.round(srcW);
-    canvas.height = Math.round(srcH);
+    canvas.width = srcW;
+    canvas.height = srcH;
 
-    ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
-    const fullUrl = canvas.toDataURL("image/jpeg", 0.90);
+    const fullUrl = canvas.toDataURL("image/jpeg", 0.92);
     const base64Data = fullUrl.split(",")[1];
 
     state.images[state.currentStep] = {
