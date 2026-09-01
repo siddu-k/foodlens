@@ -1,5 +1,5 @@
-// FoodLens AI — Offline Cache & PWA Service Worker
-const CACHE_NAME = "foodlens-v1";
+// FoodLens AI — Offline Cache & PWA Service Worker (Network First Strategy)
+const CACHE_NAME = "foodlens-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,12 +9,10 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
   self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -31,14 +29,21 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  // Only handle GET requests and local assets
+  // Pass-through non-GET and external APIs
   if (e.request.method !== "GET" || e.request.url.includes("googleapis.com")) {
     return;
   }
 
+  // Network-First: Always fetch newest files from GitHub Pages / server, fallback to cache offline
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      return cached || fetch(e.request).catch(() => cached);
-    })
+    fetch(e.request)
+      .then((networkRes) => {
+        if (networkRes && networkRes.status === 200) {
+          const resClone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+        }
+        return networkRes;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
